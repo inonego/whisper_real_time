@@ -1,3 +1,13 @@
+# Usage
+``` python
+from transcriber import execute_transcriber
+
+def process_message(message): 
+    print(message)
+
+execute_transcriber(process_message, model="large")
+```
+
 # Real Time Whisper Transcription
 
 ![Demo gif](demo.gif)
