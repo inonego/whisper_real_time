@@ -1,11 +1,17 @@
-# Usage
+# 사용 방법(예시)
 ``` python
-from transcriber import execute_transcriber
+import asyncio
 
-def process_message(message): 
-    print(message)
+from transcriber import Transcriber
 
-execute_transcriber(process_message, model="large")
+# Set and load whisper model
+transcriber = Transcriber(model = "large") 
+
+# You can use your mic after transcriber.use_mic() is called
+transcriber.use_mic() 
+
+# Run asynchronously whisper real-time transcripter
+asyncio.run(transcriber.execute())
 ```
 
 # Real Time Whisper Transcription
