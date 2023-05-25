@@ -2,11 +2,10 @@
 # The code in this repository is public domain.
 
 import io
-import whisper
-import torch
+import whisper 
 import asyncio
-import speech_recognition as sr
- 
+import speech_recognition as sr 
+
 from sys import platform
 from queue import Queue
 from datetime import datetime, timedelta
@@ -43,12 +42,11 @@ class Transcriber:
   
         # Cue the user that we're ready to go.
         print("Model loaded.\n")
- 
-    def set_sample(self, rate, width):
-        self.SAMPLE_RATE = rate
-        self.SAMPLE_WIDTH = width
     
-    async def execute(self):
+    def execute(self, callback):
+        asyncio.run(self.__execute__(callback))
+
+    async def __execute__(self, callback):
         # Current raw audio bytes.
         sample = bytes() 
         # The last time a recording was retreived from the queue.
@@ -77,14 +75,18 @@ class Transcriber:
 
                     # Write wav data to the temporary file as bytes.
                     with open(audio_path, 'w+b') as f:
-                        f.write(wav_data.read())
+                        f.write(wav_data.read())  
 
-                    # Read the transcription.
-                    result = self.loaded_model.transcribe(audio_path, fp16=torch.cuda.is_available())['text'].strip() 
+                    def infer():
+                        # Read the transcription.
+                        result = self.loaded_model.transcribe(audio_path)['text'].strip() 
 
-                    # Return transcribed sentences.
-                    #yield result
-                    if not result.isspace(): print(result)
+                        # Return transcribed sentences.
+                        #yield result
+                        if not (len(result) == 0 or result.isspace()): callback(result)
+
+                    loop = asyncio.get_event_loop()
+                    await loop.run_in_executor(None, infer)
 
                     # Clear the previous sample.
                     sample = bytes()
@@ -119,8 +121,8 @@ class Transcriber:
         else:
             source = sr.Microphone(sample_rate=16000)
  
-        self.set_sample(source.SAMPLE_RATE, source.SAMPLE_WIDTH)
-
+        self.SAMPLE_RATE, self.SAMPLE_WIDTH = source.SAMPLE_RATE, source.SAMPLE_WIDTH
+        
         with source:
             recorder.adjust_for_ambient_noise(source)
 
@@ -135,13 +137,3 @@ class Transcriber:
         # Create a background thread that will pass us raw audio bytes.
         # We could do this manually but SpeechRecognizer provides a nice helper.
         recorder.listen_in_background(source, record_callback, phrase_time_limit=self.record_timeout)
-
-# Example
-
-'''
-transcriber = Transcriber(model = "large") 
-
-transcriber.use_mic()
-
-asyncio.run(transcriber.execute())
-'''
