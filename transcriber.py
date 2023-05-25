@@ -11,13 +11,15 @@ from queue import Queue
 from datetime import datetime, timedelta
 from tempfile import NamedTemporaryFile
 
+from faster_whisper import WhisperModel
+
 class Transcriber:
-    def __init__(self, model = "medium", non_english = True, record_timeout = 2, phrase_timeout = 3):
+    def __init__(self, record_timeout = 2, phrase_timeout = 2):
         # Select model from
         # tiny/base/small/medium/large
-        self.model = model
+        self.model = "large-v2" #model
         # Check non_english for Korean or etc generation
-        self.non_english = non_english
+        #self.non_english = non_english
 
         # Timeout for speech endings
         self.record_timeout = record_timeout
@@ -35,10 +37,7 @@ class Transcriber:
         # Load / Download model
         model = self.model
 
-        if model != "large" and not self.non_english:
-            model = model + ".en"
-
-        self.loaded_model = whisper.load_model(model)
+        self.loaded_model = WhisperModel(model, device="cuda", compute_type="float16")
   
         # Cue the user that we're ready to go.
         print("Model loaded.\n")
@@ -79,7 +78,12 @@ class Transcriber:
 
                     def infer():
                         # Read the transcription.
-                        result = self.loaded_model.transcribe(audio_path)['text'].strip() 
+                        segments, _ = self.loaded_model.transcribe(audio_path, vad_filter=True)
+
+                        result = ""
+
+                        for segment in segments:
+                            result += segment.text
 
                         # Return transcribed sentences.
                         #yield result
